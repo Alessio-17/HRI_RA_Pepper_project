@@ -1,5 +1,7 @@
+let ws = null
+let logs = null
 
-// a 6x6 board
+// The 6x6 board in which the game is played
 class Board {
     constructor(htmlBoard) {
         this.size = 6
@@ -15,6 +17,7 @@ class Board {
         this.goal = 0
     }
 
+    // Setup the board in the initial configuration
     setup(config) {
         let cars = JSON.parse(config.cars)
         let trucks = JSON.parse(config.trucks)
@@ -37,17 +40,29 @@ class Board {
         }
     }
 
+    // Graphically represent the goal of the current problem
     setGoal() {
         document.querySelector(`#cell-${this.goal}5`).style.borderRight = '10px solid #08ff00'
     }
 
+    // Check whether we won the game. If so, head over to a new screen where the user is prompted to either go to the survey or to play another match
     hasWon() {
         if (this.status[this.goal][this.size-1] == '1') {
             console.log('You won!')
+            let buttons = document.getElementsByClassName('arrow-keys')
+            console.log(buttons)
+            for (let button of buttons) {
+                button.disabled = true
+                button.classList.add('inactive')
+            }
+            ws.send(JSON.stringify({'wonGame': true}))
+            logs.innerHTML = '<b>Congratulations!</b> We solved the puzzle!'
+            window.setTimeout(() => {window.location.href = "http://127.0.0.1:5500/web/interface/index.html"}, 10000)
             return true
         }
     }
 
+    // Export the status of the board to be sent to the planner
     exportStatus() {
         let cars = []
         let trucks = []
@@ -89,6 +104,7 @@ class Board {
     }
 }
 
+// A piece of the board, either a car or a truck
 class Piece {
     constructor(id, color, orientation, size, row, col, board) {
         this.id = id
@@ -104,6 +120,7 @@ class Piece {
         this.setBoard()
     }
 
+    // Move the piece on the board
     move(direction) {
         this.checkMove(direction)
         this.reset()
@@ -116,10 +133,11 @@ class Piece {
         if (this == selectedPiece) {
             this.highlight()
         }
-        this.board.hasWon()
         this.board.printStatus()
+        return this.board.hasWon()
     }
 
+    // Helper function to get all the cells occupied by the piece
     getCells() {
         let list = []
         for (let i=0; i<this.size; i++) {
@@ -133,6 +151,7 @@ class Piece {
         return list
     }
 
+    // Checks whether move is admissible
     checkMove(direction) {
         if (direction == 'left') {
             if (this.orientation == 'vertical' || this.col-this.size+1 == 0 || this.board.status[this.row][this.col-this.size] != '_') {
@@ -159,17 +178,18 @@ class Piece {
         }
     }
 
+    // Resets the cells of the board occupied by the piece to their original state
     reset() {
         if (this.orientation == 'horizontal') {
             for (let i=0; i<this.size; i++) {
                 this.board.status[this.row][this.col-i] = '_'
                 let cell = document.querySelector(`#cell-${this.row}${this.col-i}`)
                 cell.style.backgroundColor = 'white'
-                cell.style.borderRight = '1px solid black'
-                cell.style.borderBottom = '1px solid black'
+                cell.style.borderRight = '2px solid black'
+                cell.style.borderBottom = '2px solid black'
                 cell.classList.remove(this.id)
-                if (this.row == 0) {cell.style.borderTop = '1px solid black'}
-                if (this.col-i == 0) {cell.style.borderLeft = '1px solid black'}
+                if (this.row == 0) {cell.style.borderTop = '2px solid black'}
+                if (this.col-i == 0) {cell.style.borderLeft = '2px solid black'}
             }
         }
         else if (this.orientation == 'vertical') {
@@ -177,36 +197,25 @@ class Piece {
                 this.board.status[this.row+i][this.col] = '_'
                 let cell = document.querySelector(`#cell-${this.row+i}${this.col}`)
                 cell.style.backgroundColor = 'white'
-                cell.style.borderRight = '1px solid black'
-                cell.style.borderBottom = '1px solid black'
+                cell.style.borderRight = '2px solid black'
+                cell.style.borderBottom = '2px solid black'
                 cell.classList.remove(this.id)
-                if (this.row+i == 0) {cell.style.borderTop = '1px solid black'}
-                if (this.col == 0) {cell.style.borderLeft = '1px solid black'}
+                if (this.row+i == 0) {cell.style.borderTop = '2px solid black'}
+                if (this.col == 0) {cell.style.borderLeft = '2px solid black'}
             }
         }
     }
 
+    // Fill the cells corresponding to the piece on the board
     setBoard() {
         if (this.orientation == 'horizontal') {
             for (let i=0; i<this.size; i++) {
-                console.log(this.board.status)
-                console.log(this.row)
                 this.board.status[this.row][this.col-i] = this.id
                 let cell = document.querySelector(`#cell-${this.row}${this.col-i}`)
                 cell.style.backgroundColor = this.color
                 cell.classList.add(this.id)
-                /*
-                if (i == 0) {
-                    cell.style.borderTopLeftRadius = '20px'
-                    cell.style.borderBottomLeftRadius = '20px'
-                }
                 if (i == this.size-1) {
-                    cell.style.borderTopRightRadius = '20px'
-                    cell.style.borderBottomRightRadius = '20px'
-                }
-                */
-                if (i == this.size-1) {
-                    cell.style.borderRight = `1px solid ${this.color}`
+                    cell.style.borderRight = `2px solid ${this.color}`
                 }
             }
         }
@@ -217,12 +226,13 @@ class Piece {
                 cell.style.backgroundColor = this.color
                 cell.classList.add(this.id)
                 if (i != this.size-1) {
-                    cell.style.borderBottom = `1px solid ${this.color}`
+                    cell.style.borderBottom = `2px solid ${this.color}`
                 }
             }
         }
     }
 
+    // Change piece appearence to show that it is selected
     highlight() {
         let cells = []
         for (let i=0; i<this.size; i++) {
@@ -235,6 +245,8 @@ class Piece {
         }
         for (let i=0; i<this.size; i++) {
             //cells[i].style.opacity = 0.5
+            cells[i].style.top = '-5px'
+            cells[i].style.left = '-5px'
             cells[i].style.boxShadow = '5px 5px 0 #000'
             cells[i].style.zIndex = '10'
             if (this.orientation == 'horizontal') {
@@ -243,9 +255,12 @@ class Piece {
         }
     }
 
+    // Change piece appearence to show that it is not selected
     dehighlight() {
         let cells = this.getCells()
         for (let i=0; i<this.size; i++) {
+            cells[i].style.top = '0'
+            cells[i].style.left = '0'
             cells[i].style.opacity = 1
             cells[i].style.boxShadow = 'none'
             cells[i].style.zIndex = '1'
@@ -254,57 +269,62 @@ class Piece {
     }
 }
 
-/*
-module.exports = {
-    Board: Board,
-    Piece: Piece
-}
-*/
 
 let selectedPiece = null
 
 function main() {
-    let logs = document.querySelector('.logs')
+    logs = document.querySelector('.logs')
     let htmlBoard = document.querySelector('.board')
     let board = new Board(htmlBoard)
+    let timer = null
 
-    let ws = new WebSocket('ws://localhost:9000/websocketserver')
+    // Websocket to connect to the server
+    ws = new WebSocket('ws://localhost:9050/websocketserver')
     ws.onopen = function() {
-        ws.send('Opened web client socket')
+        //ws.send('Opened web client socket')
+        ws.send(JSON.stringify({id: 'gameSetup'}))
     }
     ws.onmessage = function(e) {
-        console.log(e.data)
         let config = JSON.parse(e.data)
         if (config.id.includes('level')) {
             board.setup(config)
         }
         else if (config.id == 'nextMove') {
-            console.log('NUOVA MOSSA ARRIVATAAAAA')
-            console.log(config)
             let movingPiece = board.pieces[config.vehicle]
-            console.log(movingPiece)
             for (let i=0; i<config.nCells; i++) {
-                console.log('entrato nel for')
-                console.log(movingPiece.orientation)
-                console.log(config.move_type)
                 if (movingPiece.orientation == 'horizontal' && config.move_type == 'forward') {
                     movingPiece.move('right')
                     console.log(`Planner said: move piece ${config.vehicle} right`)
+                    if (i == 0) {
+                        ws.send(JSON.stringify({'motionDirection': 'right'}))
+                    }
                 }
                 else if (movingPiece.orientation == 'horizontal' && config.move_type == 'backward') {
                     movingPiece.move('left')
                     console.log(`Planner said: move piece ${config.vehicle} left`)
+                    if (i == 0) {
+                        ws.send(JSON.stringify({'motionDirection': 'left'}))
+                    }
                 }
                 else if (movingPiece.orientation == 'vertical' && config.move_type == 'forward') {
                     movingPiece.move('up')
                     console.log(`Planner said: move piece ${config.vehicle} up`)
+                    if (i == 0) {
+                        ws.send(JSON.stringify({'motionDirection': 'up'}))
+                    }
                 }
                 else if (movingPiece.orientation == 'vertical' && config.move_type == 'backward') {
                     movingPiece.move('down')
                     console.log(`Planner said: move piece ${config.vehicle} down`)
+                    if (i == 0) {
+                        ws.send(JSON.stringify({'motionDirection': 'down'}))
+                    }
                 }
             }
-            //board.setup(config)
+            // after one minute from the last Pepper move, Pepper asks human if they are struggling
+            timer = window.setTimeout(() => {
+                ws.send(JSON.stringify({'pepperSad': true, 'sentence': 'Are you struggling with your next move?'}))
+            }, 1000*60) // 180 seconds
         }
     }
 
@@ -318,19 +338,16 @@ function main() {
             let cell = document.createElement('div')
             cell.classList.add('cell')
             cell.id = `cell-${i}${j}`
-            if (i == 0) {cell.style.borderTop = '1px solid black'}
-            if (j == 0) {cell.style.borderLeft = '1px solid black'}
+            if (i == 0) {cell.style.borderTop = '2px solid black'}
+            if (j == 0) {cell.style.borderLeft = '2px solid black'}
             cell.addEventListener('click', () => {
-                console.log(board.pieces)
                 for (let piece in board.pieces) {
-                    console.log(board.pieces[piece].color)
                     if (cell.classList.contains(piece)) {
                         if (selectedPiece != null) {
                             selectedPiece.dehighlight()
                         }
                         selectedPiece = board.pieces[piece]
                         selectedPiece.highlight()
-                        console.log(selectedPiece)
                         return
                     }   
                 }
@@ -340,50 +357,23 @@ function main() {
         }
     }
 
-    let startButton1 = document.querySelector('.level1')
-    startButton1.addEventListener('click', () => {
-        ws.send(JSON.stringify({id: 'level1'}))
-    })
-    let startButton2 = document.querySelector('.level2')
-    startButton2.addEventListener('click', () => {
-        ws.send(JSON.stringify({id: 'level2'}))
-    })
-    let startButton3 = document.querySelector('.level3')
-    startButton3.addEventListener('click', () => {
-        ws.send(JSON.stringify({id: 'level3'}))
-    })
-    let exportButton = document.querySelector('.export')
-    exportButton.addEventListener('click', () => {
-        console.log(board.exportStatus())
-    })
-
     let buttons = document.getElementsByClassName('arrow-keys')
     console.log(buttons)
     for (let button of buttons) {
         button.addEventListener('click', () => {
             try {
-                selectedPiece.move(button.id)
+                if (!selectedPiece.move(button.id)) {
+                    ws.send(JSON.stringify(board.exportStatus()))
+                }
+                window.clearTimeout(timer)
                 logs.innerText = ''
-                //ws.send(`Moved ${selectedPiece.id} ${button.id}`)
-                ws.send(JSON.stringify(board.exportStatus()))
             }
             catch(err) {
                 logs.innerText = err
+                ws.send(JSON.stringify({'pepperSad': true, 'sentence': 'This move is not allowed, please try again'}))
             }
         })
     }
-
-    /*
-    new Piece('red', 'horizontal', 2, 2, 1, board)
-    new Piece('lightgreen', 'horizontal', 2, 0, 0, board)
-    new Piece('violet', 'vertical', 3, 1, 0, board)
-    new Piece('orange', 'vertical', 2, 4, 0, board)
-    new Piece('darkgreen', 'horizontal', 3, 5, 2, board)
-    new Piece('dodgerblue', 'vertical', 3, 1, 3, board)
-    new Piece('lightblue', 'horizontal', 2, 4, 4, board)
-    new Piece('yellow', 'vertical', 3, 0, 5, board)
-    */
-
 
     board.printStatus()
 

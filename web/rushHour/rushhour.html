@@ -9,17 +9,23 @@
     <script src="./rushhour.js" defer></script>
 </head>
 <body>
-    <div class="scene">
-        <button class="level1">Generate level 1</button>
-        <button class="level2">Generate level 2</button>
-        <button class="level3">Generate level 3</button>
-        <button class="export">Export status</button>
-        <div class="board"></div>
-        <div class="button-container">
-            <button class="arrow-keys" id="left">Left</button>
-            <button class="arrow-keys" id="down">Down</button>
-            <button class="arrow-keys" id="up">Up</button>
-            <button class="arrow-keys" id="right">Right</button>            
+    <div class="page">
+        <h1>Rush Hour!</h1>
+        <h2>Move vehicles to let the red car out of this madness!</h2>
+        <div class="scene">
+            <div class="board-container">
+                <div class="board"></div>
+            </div>
+            <div class="button-container">
+                <div class="top-row">
+                    <button class="arrow-keys" id="up">↑</button>
+                </div>
+                <div class="bottom-row">
+                    <button class="arrow-keys" id="left">←</button>
+                    <button class="arrow-keys" id="down">↓</button>
+                    <button class="arrow-keys" id="right">→</button>           
+                </div>
+            </div>
         </div>
         <div class="logs"></div>
     </div>

@@ -7,6 +7,10 @@ import tornado.web
 from threading import Thread
 import json
 
+'''
+    File containing all the logic for the planner and the server to communicate with the other modules of the projects
+'''
+
 websocket_server = None     # websocket handler
 run = True                  # main_loop run flag
 
@@ -20,11 +24,8 @@ class MyWebSocketServer(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         global code, status, robot
         content = json.loads(message)
-        print(type(content))
-        print("questo è il contenuto del messaggio")
-        print(content)
+        # Handle requests for all levels of the game
         if (content['id'] == 'level1'):
-            #write message to socket
             config = {'id': content['id'],
                       'cars': '[[1,1,2,1,1],[2,1,4,2,4],[3,3,1,4,1],[4,5,6,5,5],[5,4,3,4,2],[6,5,1,6,1],[7,5,2,6,2]]',
                       'trucks': '[[8,3,4,4,4,5,4]]'}
@@ -42,25 +43,17 @@ class MyWebSocketServer(tornado.websocket.WebSocketHandler):
                       'trucks': '[[4,1,3,2,3,3,3],[5,4,5,5,5,6,5]]'}
             config = json.dumps(config, indent=4)
             self.write_message(config)
+        # Handle request for next move made by Pepper
         elif (content['id'] == 'boardStatus'):
             vehicle, move_type, nCells = problemDefinition(content['cars'], content['trucks'])
             nextMove = {'id': 'nextMove',
                         'vehicle': vehicle,
                         'move_type': move_type,
-                        'nCells': nCells}
+                        'nCells': str(nCells)}
             nextMove = json.dumps(nextMove, indent=4)
             self.write_message(nextMove)
         else:
             print('Message received:\n%s' % message)
-            #robot.say(message)
-            '''
-            if (status=='Idle'):
-                t = Thread(target=run_code, args=(message,))
-                t.start()
-            else:
-                print 'Program running. This code is discarded.'
-            '''
-        #self.write_message(None)
   
     def on_close(self):
         print('Connection closed')
@@ -72,7 +65,6 @@ class MyWebSocketServer(tornado.websocket.WebSocketHandler):
         print('pong received: %s' %(data))
   
     def check_origin(self, origin):
-        #print "-- Request from %s" %(origin)
         return True
 
 def problemSolver(problem):
@@ -106,7 +98,6 @@ def problemSolver(problem):
 
 
 def problemDefinition(cars, trucks): 
-    start = time.perf_counter()
     num_rows = 6
     num_cols = 6
     cells_list = []
@@ -244,11 +235,7 @@ def problemDefinition(cars, trucks):
         problem.set_initial_value(adj_3(s2o[f"cell_{c[0][0]}{c[0][1]}"],s2o[f"cell_{c[1][0]}{c[1][1]}"],s2o[f"cell_{c[2][0]}{c[2][1]}"]),True)
         problem.set_initial_value(adj_3(s2o[f"cell_{c[2][0]}{c[2][1]}"],s2o[f"cell_{c[1][0]}{c[1][1]}"],s2o[f"cell_{c[0][0]}{c[0][1]}"]),True)
 
-    end = time.perf_counter()
-    print(f"Problem definition took: {end-start} seconds")
 
-    start = time.perf_counter()
-    # THIS INITIALIZATION DEPENDS ON THE BOARD IN THE HTML PAGE --> we make it a function
     occupied_cells = []
     objects = []
 
@@ -288,36 +275,16 @@ def problemDefinition(cars, trucks):
     
     # Add goal
     problem.add_goal(car_at(RED_object,s2o[f"cell_{RED_initial_row_head}{6}"],s2o[f"cell_{RED_initial_row_tail}{5}"]))
-    
-    end = time.perf_counter()
-    print(f"Problem initialization took: {end-start} seconds")
 
-    start = time.perf_counter()
+
     vehicle, move_type, nCells = problemSolver(problem)
-    end = time.perf_counter()
-    print(f"Finding solution took: {end-start} seconds")
-    return vehicle, move_type, nCells
 
-def level1():
-    cars = [[1,1,2,1,1],[2,1,4,2,4],[3,3,1,4,1],[4,5,6,5,5],[5,4,3,4,2],[6,5,1,6,1],[7,5,2,6,2]]  
-    trucks = [[8,3,4,4,4,5,4]] 
-    vehicle, move_type, nCells = problemDefinition(cars,trucks)
-    if vehicle==0:
-        print("No plan found")
-    else:
-        print(f"The vehicle_{vehicle} is moving {move_type} of {nCells} number of cells")
+    return vehicle, move_type, nCells
 
 def main_loop(data):
     global run, websocket_server, status, tablet_service
     while (run):
         time.sleep(1)
-        #if (run and not websocket_server is None):
-            #try:
-                #websocket_server.write_message(status)
-                #print status
-            #except tornado.websocket.WebSocketClosedError:
-                #print 'Connection closed.'
-                #websocket_server = None
 
     print("Main loop quit.")
 
@@ -327,16 +294,12 @@ def main():
     t = Thread(target=main_loop, args=(None,))
     t.start()
 
-    #begin()
-
     # Run web server
     application = tornado.web.Application([
         (r'/websocketserver', MyWebSocketServer),])  
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(9020)
     print("Websocket server listening on port %d" %(9020))
-#    tablet_service.showWebview(webview)
-
 
     try:
         tornado.ioloop.IOLoop.instance().start()
