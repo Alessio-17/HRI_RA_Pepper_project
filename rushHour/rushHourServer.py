@@ -24,7 +24,7 @@ from pepper_cmd import *
 
 websocket_server = None     # websocket handler
 run = True                  # main_loop run flag
-difficultyLevel = 0        # difficulty level
+difficultyLevel = 0         # difficulty level
 surveyResults = []
 currentPlayer = None
 startFromZero = True
@@ -39,7 +39,7 @@ class PlannerClient(object):
     @tornado.gen.coroutine
     def on_message(self, message):
         #print "Received message: %s" % message
-        # qui sarebbe da mettere tipo (if message[0] == '{') per capire se il messaggio e' una configurazione
+        
         if (message == None):
             return
         config = json.loads(message)
@@ -48,9 +48,9 @@ class PlannerClient(object):
         elif (config['id'] == 'nextMove'):
             #print 'Sto ricevendo la configurazione dal planner'
             self.websocket_server.write_message(json.dumps(config, indent=4))
-        #self.close()
-        # Per chiuderla manda un messaggio None da planner
-        #tornado.ioloop.IOLoop.current().stop() 
+        
+        
+        
 
     @tornado.gen.coroutine
     def send_message(self, message):
@@ -61,7 +61,7 @@ class PlannerClient(object):
         self.ws_client = yield websocket_connect('ws://localhost:9020/websocketserver', on_message_callback=self.on_message)
         #print "Test here"
         self.ws_client.write_message(self.message)
-        #tornado.ioloop.IOLoop.current().start()
+        
 
 class HumanSpeakClient(object):
     def __init__(self, message, websocket_server):
@@ -73,7 +73,6 @@ class HumanSpeakClient(object):
     @tornado.gen.coroutine
     def on_message(self, message):
         global robot
-        # qui sarebbe da mettere tipo (if message[0] == '{') per capire se il messaggio e' una configurazione
         if (message == None):
             return
         elif ('answer' in message):
@@ -84,16 +83,9 @@ class HumanSpeakClient(object):
             robot.memory_service.insertData('FakeRobot/ASRevent', config['answer'])
             robot.memory_service.insertData('FakeRobot/ASRtime', tm)
             self.websocket_server.write_message(json.dumps(config, indent=4))
-        '''
-        if ('level' in config['id']):
-            self.websocket_server.write_message(json.dumps(config, indent=4))
-        elif (config['id'] == 'nextMove'):
-            print 'Sto ricevendo la configurazione dal planner'
-            self.websocket_server.write_message(json.dumps(config, indent=4))
-            '''
+            
         self.ws_client.close()
-        # Per chiuderla manda un messaggio None da planner
-        #tornado.ioloop.IOLoop.current().stop() 
+        
 
     @tornado.gen.coroutine
     def send_message(self, message):
@@ -117,9 +109,7 @@ class MyWebSocketServer(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         global code, status, robot, difficultyLevel, surveyResults, currentPlayer, startFromZero
         #print 'ricevuto messaggio %s' % message
-        #if (message=='stop'):
-            #print 'Stop code and robot'
-            #robot_stop_request()
+        
 
         if (message == 'Just finished game?'):
             if startFromZero:
@@ -149,7 +139,6 @@ class MyWebSocketServer(tornado.websocket.WebSocketHandler):
             newMessage = json.dumps({'id': 'level%d' % difficultyLevel}, indent=4)
             client = PlannerClient(newMessage, self)
 
-        # SCRIVI ANCHE QUI L'IF PER MANDARE LA CONFIGURAZIONE AL PLANNER
         elif ('boardStatus' in message):
             robot.say('I am thinking about the next move...')
             client = PlannerClient(message, self)
@@ -194,7 +183,6 @@ class MyWebSocketServer(tornado.websocket.WebSocketHandler):
                 if (el['username'] == currentPlayer):
                     surveyResults.remove(el)
             surveyResults.append(config['setSurvey'])
-            #print 'HO SETTATO LA SURVEY A QUESTO VALOREEEEEEEEEEEEEEEEE'
             #print surveyResults
             if (config['finalSubmit']):
                 startFromZero = True
